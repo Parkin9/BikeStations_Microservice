@@ -90,8 +90,9 @@ public class BikeStationController {
 
         Optional<BikeStation> bikeStationOptional = bikeStationRepository.findById(idStation);
 
-        // if the BikeStation hasn't been found in DB
         if(!bikeStationOptional.isPresent()) {
+
+            // if the BikeStation hasn't been found in DB
             throw new BikeStationNotFoundException("BikeStation (id: " + idStation + ") not found");
         }
 
