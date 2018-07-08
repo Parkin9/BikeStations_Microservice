@@ -33,7 +33,6 @@ public class GiveBackServiceImpl implements GiveBackService {
     @Transactional
     public void giveBack(Long idStation, Long idUser) throws BikeStationNotFoundException, UserTempNotFoundException {
 
-        // TODO: sprawdzic "try - autocallapse"
         Optional<UserTemp> fromUserTemp = userTempRepository.findById(idUser);
         Optional<BikeStation> toBikeStation = bikeStationRepository.findById(idStation);
 

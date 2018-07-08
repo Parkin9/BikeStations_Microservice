@@ -7,9 +7,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import pl.parkin9.BikeStations_Microservice.Exception.BikeStationNotFoundException;
 import pl.parkin9.BikeStations_Microservice.Exception.UserTempNotFoundException;
 import pl.parkin9.BikeStations_Microservice.Model.BikeStation;
+import pl.parkin9.BikeStations_Microservice.Model.StatusStation;
 import pl.parkin9.BikeStations_Microservice.Repository.BikeStationRepository;
 import pl.parkin9.BikeStations_Microservice.Service.BorrowService;
 import pl.parkin9.BikeStations_Microservice.Service.GiveBackService;
+import pl.parkin9.BikeStations_Microservice.Service.StatusAllStationsService;
 
 import java.net.URI;
 import java.util.List;
@@ -22,22 +24,26 @@ public class BikeStationController {
     private final BikeStationRepository bikeStationRepository;
     private final BorrowService borrowService;
     private final GiveBackService giveBackService;
+    private final StatusAllStationsService statusAllStationsService;
 
     @Autowired
     public BikeStationController(BikeStationRepository bikeStationRepository,
-                                 BorrowService borrowService, GiveBackService giveBackService) {
+                                 BorrowService borrowService,
+                                 GiveBackService giveBackService,
+                                 StatusAllStationsService statusAllStationsService) {
 
         this.bikeStationRepository = bikeStationRepository;
         this.borrowService = borrowService;
         this.giveBackService = giveBackService;
+        this.statusAllStationsService = statusAllStationsService;
     }
 
 //////////////////////////////////////////////////////////////////
 
     @GetMapping("/stations")
-    public List<BikeStation> showAllBikeStations() {
+    public List<StatusStation> showAllBikeStations() {
 
-        return bikeStationRepository.findAll();
+        return statusAllStationsService.build();
     }
 
 
@@ -77,11 +83,11 @@ public class BikeStationController {
     }
 
 
+    // Update the whole Station
     @PutMapping("/stations/{idStation}")
     public ResponseEntity<Object> updateBikeStation(@RequestBody BikeStation bikeStation,
                                                     @PathVariable Long idStation) throws BikeStationNotFoundException {
 
-        // TODO: sprawdzic "try - autocallapse"
         Optional<BikeStation> bikeStationOptional = bikeStationRepository.findById(idStation);
 
         // if the BikeStation hasn't been found in DB
@@ -93,10 +99,11 @@ public class BikeStationController {
 
         bikeStationRepository.save(bikeStation);
 
-        return ResponseEntity.ok().body("Success");
+        return ResponseEntity.ok().body("Update - successful");
     }
 
 
+    // Update - "renting a bike"
     @PatchMapping("/stations/borrow/{idStation}/{idUser}/{serialNumBike}")
     public ResponseEntity<Object> borrowBike(@PathVariable Long idStation,
                                              @PathVariable Long idUser,
@@ -104,16 +111,17 @@ public class BikeStationController {
                                                                                         UserTempNotFoundException {
         borrowService.borrow(idStation, idUser, serialNumBike);
 
-        return ResponseEntity.ok().body("Success");
+        return ResponseEntity.ok().body("User takes a bike for a ride.");
     }
 
 
+    // Update - "returning a bike"
     @PatchMapping("/stations/gback/{idStation}/{idUser}")
     public ResponseEntity<Object> giveBackBike(@PathVariable Long idStation,
                                                @PathVariable Long idUser) throws BikeStationNotFoundException,
                                                                                     UserTempNotFoundException {
         giveBackService.giveBack(idStation, idUser);
 
-        return ResponseEntity.ok().body("Success");
+        return ResponseEntity.ok().body("User returns a bike from a ride.");
     }
 }

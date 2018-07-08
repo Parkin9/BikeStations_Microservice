@@ -33,7 +33,6 @@ public class BorrowServiceImpl implements BorrowService {
     @Transactional
     public void borrow(Long idStation, Long idUser, String serialNumBike) throws BikeStationNotFoundException,
                                                                                     UserTempNotFoundException {
-        // TODO: sprawdzic "try - autocallapse"
         Optional<BikeStation> fromBikeStation = bikeStationRepository.findById(idStation);
         Optional<UserTemp> toUserTemp = userTempRepository.findById(idUser);
 
