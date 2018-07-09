@@ -5,27 +5,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.parkin9.BikeStations_Microservice.Exception.BikeStationNotFoundException;
 import pl.parkin9.BikeStations_Microservice.Exception.UserTempNotFoundException;
-import pl.parkin9.BikeStations_Microservice.Model.Bike;
 import pl.parkin9.BikeStations_Microservice.Model.BikeStation;
-import pl.parkin9.BikeStations_Microservice.Model.Slot;
 import pl.parkin9.BikeStations_Microservice.Model.UserTemp;
 import pl.parkin9.BikeStations_Microservice.Repository.BikeStationRepository;
 import pl.parkin9.BikeStations_Microservice.Repository.UserTempRepository;
 
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 public class BorrowServiceImpl implements BorrowService {
 
     private final BikeStationRepository bikeStationRepository;
     private final UserTempRepository userTempRepository;
+    private final MoveBike moveBike;
+    private final SwitchSlot switchSlot;
 
     @Autowired
-    public BorrowServiceImpl(BikeStationRepository bikeStationRepository, UserTempRepository userTempRepository) {
+    public BorrowServiceImpl(BikeStationRepository bikeStationRepository, UserTempRepository userTempRepository, MoveBike moveBike, SwitchSlot switchSlot) {
         this.bikeStationRepository = bikeStationRepository;
         this.userTempRepository = userTempRepository;
+        this.moveBike = moveBike;
+        this.switchSlot = switchSlot;
     }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -33,46 +33,34 @@ public class BorrowServiceImpl implements BorrowService {
     @Transactional
     public void borrow(Long idStation, Long idUser, String serialNumBike) throws BikeStationNotFoundException,
                                                                                     UserTempNotFoundException {
-        Optional<BikeStation> fromBikeStation = bikeStationRepository.findById(idStation);
-        Optional<UserTemp> toUserTemp = userTempRepository.findById(idUser);
+
+        Optional<BikeStation> bikeStation = bikeStationRepository.findById(idStation);
+        Optional<UserTemp> userTemp = userTempRepository.findById(idUser);
 
         // if the BikeStation hasn't been found in DB
-        if(!fromBikeStation.isPresent()) {
+        if(!bikeStation.isPresent()) {
             throw new BikeStationNotFoundException("BikeStation (id: " + idStation + ") not found");
         }
 
         // if the UsetTemp hasn't been found in DB
-        if(!toUserTemp.isPresent()) {
+        if(!userTemp.isPresent()) {
             throw new UserTempNotFoundException("User (id: " + idUser + ") not found");
         }
 
-        Set<Bike> bikeSet = new HashSet<>(fromBikeStation.get().getBikeSet());
-        Set<Slot> slotSet = new HashSet<>(fromBikeStation.get().getSlotSet());
 
 
-        // get Bike from Station and save to UserTemp
-        for(Bike bike : bikeSet) {
+        BikeStation fromBikeStation = bikeStation.get();
+        UserTemp toUserTemp = userTemp.get();
 
-            if(bike.getSerialNumber().equals(serialNumBike)) {
+        // getting Bike from Station and saving to UserTemp
+        moveBike.moveToUser(fromBikeStation, toUserTemp, serialNumBike);
 
-                bikeSet.remove(bike);
-                fromBikeStation.get().setBikeSet(bikeSet);
-                toUserTemp.get().setRentBike(bike);
-                break;
-            }
-        }
+        // changing occupied Slot to free
+        switchSlot.switchFalseToTrue(fromBikeStation);
 
-        // change occupied Slot to free
-        for(Slot slot : slotSet) {
 
-            if(slot.getFree().equals(false)) {
 
-                slot.setFree(true);
-                break;
-            }
-        }
-
-        bikeStationRepository.save(fromBikeStation.get());
-        userTempRepository.save(toUserTemp.get());
+        bikeStationRepository.save(fromBikeStation);
+        userTempRepository.save(toUserTemp);
     }
 }
